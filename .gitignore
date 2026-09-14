@@ -1,0 +1,4 @@
+# VS Code specific files, build artifacts, and virtual environments
+.vscode/
+.pio/
+.venv/
