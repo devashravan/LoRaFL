@@ -39,6 +39,10 @@ class CSVFile {
 
         ~CSVFile();
 
+        // Delete copy constructor and assignment operator to prevent copying
+        CSVFile(const CSVFile&) = delete;
+        CSVFile& operator=(const CSVFile&) = delete;
+
         /*
           @return true if the file was successfully opened and indexed, false otherwise. However,
           this doesn't guarantee that the contents of the file are valid.
