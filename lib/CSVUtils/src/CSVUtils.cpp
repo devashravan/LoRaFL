@@ -1,4 +1,4 @@
-#include "csv_file.h"
+#include "CSVUtils.h"
 
 #define MAX_TOKEN_LEN 16   // max token buffer length, including null terminator
 
@@ -107,7 +107,7 @@ bool CSVFile::buildIndex() {
     return true;
 }
 
-ReadStatus CSVFile::readRow(uint32_t rowNumber, int32_t* features, int32_t* outputs) {
+ReadStatus CSVFile::readRow(uint32_t rowNumber, float* features, float* outputs) {
     if (features == nullptr || outputs == nullptr)
         return INVALID_BUFFER;
 
@@ -139,14 +139,10 @@ ReadStatus CSVFile::readRow(uint32_t rowNumber, int32_t* features, int32_t* outp
         token[tokenLen] = '\0';
 
         char* end;
-        long parsedVal = strtol(token, &end, 10);
+        float val = strtof(token, &end);
 
         if (tokenLen == 0 || end == token || *end != '\0')
             return TOKEN_NOT_VALID;
-        if (parsedVal < INT32_MIN || parsedVal > INT32_MAX)
-            return TOKEN_NOT_VALID;
-
-        int32_t val = (int32_t)parsedVal;
 
         if (fieldIdx < _numFeatures) features[fieldIdx] = val;
         else if (fieldIdx < totalFields) outputs[fieldIdx - _numFeatures] = val;

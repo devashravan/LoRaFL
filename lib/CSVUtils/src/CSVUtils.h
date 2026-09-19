@@ -59,7 +59,7 @@ class CSVFile {
 
           @return ReadStatus code indicating success or failure
         */
-        ReadStatus readRow(uint32_t rowNumber, int32_t* features, int32_t* outputs);
+        ReadStatus readRow(uint32_t rowNumber, float* features, float* outputs);
 
     private:
         File _file;
