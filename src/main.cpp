@@ -34,10 +34,10 @@ void setup() {
         Serial.println(filename);
         float pixels[196], true_digit[1], output_activations[10];
         for (uint32_t j = 0; j < csvFile.numRows(); ++j) {
-            ReadStatus status = csvFile.readRow(i, pixels, true_digit);
+            ReadStatus status = csvFile.readRow(j, pixels, true_digit);
             if (status != READ_OK) { 
                 Serial.print("Error reading row ");
-                Serial.print(i);
+                Serial.print(j);
                 Serial.print(": ");
                 switch (status) {
                     case INVALID_BUFFER:
