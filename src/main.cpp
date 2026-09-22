@@ -23,7 +23,7 @@ void setup() {
         filename[19] = '0' + ((i/10) % 10);  // Replace '@' with the digit
         filename[20] = '0' + (i % 10);       // Replace '@' with the digit
 
-        CSVFile csvFile(filename, 196, 1, true);
+        CSVFile csvFile(filename, 49, 1, true);
         if (!csvFile.isValid()) {
             Serial.print("Failed to initialize CSV file: ");
             Serial.println(filename);
@@ -32,7 +32,7 @@ void setup() {
 
         Serial.print("Reading file: ");
         Serial.println(filename);
-        float pixels[196], true_digit[1], output_activations[10];
+        float pixels[49], true_digit[1], output_activations[10];
         for (uint32_t j = 0; j < csvFile.numRows(); ++j) {
             ReadStatus status = csvFile.readRow(j, pixels, true_digit);
             if (status != READ_OK) { 
