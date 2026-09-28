@@ -1,5 +1,5 @@
-#ifndef CSVFILE_H
-#define CSVFILE_H
+#ifndef CSVUTILS_H
+#define CSVUTILS_H
 
 #include <Arduino.h>
 #include <SD.h>
@@ -10,30 +10,32 @@
 enum ReadStatus {
     READ_OK = 0,
     INVALID_BUFFER,
-    FILE_EOF,
     FILE_NOT_VALID,
-    TOKEN_NOT_VALID,
-    COLUMN_NUM_MISMATCH
+    FILE_EOF,
+    TOKEN_NOT_VALID
 };
 
 /*
-Provides row-indexed access to a CSV dataset stored on an SD card in O(1) time per row, once the
-file has been indexed. The CSV file must have one data entry per line, with comma-separated
-numeric fields, the first line may optionally be a header. Each row must have exactly `numFeatures`
-feature columns followed by `numOutputs` output columns, in that order.
+  Provides row-indexed access to a CSV dataset stored on an SD card in O(1) time per row. The CSV file
+  must have one data row per line, with comma-separated numeric fields, each exactly `charsPerField`
+  characters wide (values must be pre-formatted to a fixed sign/decimal convention). The first line
+  may optionally be a header. Each row must have exactly `numFeatures` feature columns followed by
+  `numOutputs` output columns, in that order.
 */
 class CSVFile {
     public:
         /*
-          @param filename     path on SD card
-          @param numFeatures  number of input feature columns
-          @param numOutputs   number of output columns
-          @param hasHeader    true if the first line is a header to skip
+          @param filename       path on SD card
+          @param numFeatures    number of input feature columns
+          @param numOutputs     number of output columns
+          @param charsPerField  number of characters per field (not counting the delimiter)
+          @param hasHeader      true if the first line is a header to skip
         */
         CSVFile(
             const char* filename,
             uint8_t numFeatures,
             uint8_t numOutputs,
+            uint8_t charsPerField,
             bool hasHeader = true
         );
 
@@ -44,13 +46,13 @@ class CSVFile {
         CSVFile& operator=(const CSVFile&) = delete;
 
         /*
-          @return true if the file was successfully opened and indexed, false otherwise. However,
-          this doesn't guarantee that the contents of the file are valid.
+          @return true if the file was successfully opened and has valid structure, false otherwise.
+          However, this doesn't guarantee that the contents of the file are valid.
         */
         bool isValid() const;
 
         /*
-          @return Total number of data rows found during indexing (excluding header).
+          @return Total number of data rows in the file.
         */
         uint32_t numRows() const;
 
@@ -68,20 +70,16 @@ class CSVFile {
     private:
         File _file;
         char* _filename;
-        uint32_t* _offsets;
-        uint32_t _rowCount;
         uint8_t _numFeatures;
         uint8_t _numOutputs;
+        uint8_t _charsPerField;
+        uint32_t _charsPerDataRow;
         bool _hasHeader;
+        uint32_t _headerOffset;
+        uint32_t _rowCount;
         bool _isValid;
 
-        /*
-          Scans the CSV file once when the CSVFile object is constructed, stores row count and
-          builds an index of the starting byte of each data row in the file to allow O(1) access
-          to any row.
-        */
-        bool buildIndex();
-
+        bool checkValidity();
 };
 
-#endif // CSVFILE_H
+#endif // CSVUTILS_H
