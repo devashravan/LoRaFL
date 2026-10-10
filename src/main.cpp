@@ -22,7 +22,7 @@ void setup() {
     Serial.println("Reading /test.csv from SD card...");
     char filename[10] = "/test.csv";
     unsigned long initStart = millis();
-    CSVFile testDataset(filename, 49, 1, 8, 1, true);
+    CSVFile testDataset(filename, 49, 1, 8, 1, true, false);
     if (!testDataset.isValid()) {
         Serial.println("Failed to initialize test dataset");
         return;

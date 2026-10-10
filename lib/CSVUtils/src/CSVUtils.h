@@ -32,6 +32,7 @@ class CSVFile {
           @param charsPerInField   number of characters per input feature field
           @param charsPerOutField  number of characters per output field
           @param hasHeader         true if the first line is a header to skip
+          @param checkValidity     true to check the file's structure for validity on construction
         */
         CSVFile(
             const char* filename,
@@ -39,7 +40,8 @@ class CSVFile {
             uint8_t numOutputs,
             uint8_t charsPerInField,
             uint8_t charsPerOutField,
-            bool hasHeader = true
+            bool hasHeader = true,
+            bool checkValidity = true
         );
 
         ~CSVFile();
@@ -79,11 +81,12 @@ class CSVFile {
         uint8_t _charsPerOutField;
         uint32_t _charsPerDataRow;
         bool _hasHeader;
+        bool _checkValidity;
         uint32_t _headerOffset;
         uint32_t _rowCount;
         bool _isValid;
 
-        bool checkValidity();
+        void _checkFormat();
 };
 
 #endif // CSVUTILS_H

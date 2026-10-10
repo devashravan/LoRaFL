@@ -6,7 +6,8 @@ CSVFile::CSVFile(
     uint8_t numOutputs,
     uint8_t charsPerInField,
     uint8_t charsPerOutField,
-    bool hasHeader
+    bool hasHeader,
+    bool checkValidity
 ) : _filename(nullptr),
     _numFeatures(numFeatures),
     _numOutputs(numOutputs),
@@ -17,6 +18,7 @@ CSVFile::CSVFile(
         numOutputs  * (charsPerOutField + 1)
     ),
     _hasHeader(hasHeader),
+    _checkValidity(checkValidity),
     _headerOffset(0),
     _rowCount(0),
     _isValid(false)
@@ -31,7 +33,23 @@ CSVFile::CSVFile(
     strncpy(_filename, filename, strlen(filename) + 1);
     _filename[strlen(filename)] = '\0';
 
-    _isValid = checkValidity();
+    _file = SD.open(_filename, FILE_READ);
+    if (!_file)
+        return;
+
+    // Skip the header line if present
+    while (_hasHeader && _file.available()) {
+        int c = _file.read();
+        _headerOffset++;
+        if (c == '\n') break;
+    }
+
+    if (_checkValidity) {
+        _checkFormat();
+    } else {
+        _rowCount = _file.size() / _charsPerDataRow;
+        _isValid = true;
+    }
 }
 
 CSVFile::~CSVFile() {
@@ -92,36 +110,25 @@ ReadStatus CSVFile::readRow(uint32_t rowNumber, float* features, float* outputs)
     return READ_OK;
 }
 
-bool CSVFile::checkValidity() {
-    _file = SD.open(_filename, FILE_READ);
-    if (!_file)
-        return false;
-
-    // Skip the header line if present
-    while (_hasHeader && _file.available()) {
-        int c = _file.read();
-        _headerOffset++;
-        if (c == '\n') break;
-    }
-
+void CSVFile::_checkFormat() {
     uint8_t charIdx = 0;
     uint16_t fieldIdx = 0;
     uint16_t totalFields = _numFeatures + _numOutputs;
     uint32_t rowCount = 0;
-
+    
     while (_file.available()) {
         int c = _file.read();
         uint8_t charsPerField = (fieldIdx < _numFeatures) ? _charsPerInField : _charsPerOutField;
 
         if (c == ',' || c == '\n') {
             if (charIdx != charsPerField)
-                return false;  // wrong number of characters in this field
+                return;  // wrong number of characters in this field
             charIdx = 0;
 
             fieldIdx++;
             if (c == '\n') {
                 if (fieldIdx != totalFields)
-                    return false;  // wrong number of columns in this row
+                    return;  // wrong number of columns in this row
                 fieldIdx = 0;
 
                 rowCount++;
@@ -129,21 +136,22 @@ bool CSVFile::checkValidity() {
         } else {
             charIdx++;
             if (charIdx > charsPerField)
-                return false;  // field too long
+                return;  // field too long
         }
     }
-
+    
     // Handle a final row with no trailing newline
     if (charIdx > 0 || fieldIdx > 0) {
         uint8_t charsPerField = (fieldIdx < _numFeatures) ? _charsPerInField : _charsPerOutField;
         if (charIdx != charsPerField)
-            return false;
+            return;
         fieldIdx++;
         if (fieldIdx != totalFields)
-            return false;
+            return;
         rowCount++;
     }
-
+    
     _rowCount = rowCount;
-    return true;
+    _isValid = true;
+    return;
 }
