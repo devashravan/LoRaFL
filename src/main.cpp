@@ -2,66 +2,66 @@
 #include <aifes.h>
 #include <CSVUtils.h>
 
-#include "models/MNISTNet/aifes_e_f32_fnn.h"
-#include "models/MNISTNet/aifes_e_f32_weights.h"
-
+#include "models/MNISTNet/aifes_f32_fnn.h"
+#include "models/MNISTNet/aifes_f32_weights.h"
 
 void setup() {
     Serial.begin(115200);
     delay(100);
 
-    Serial.println("\nAIfES MNIST inference");
+    Serial.printf("\nAIfES MNIST inference demo\n");
 
-    if (!SD.begin(D8)) {
-        Serial.println("SD initialization failed (check wiring, CS pin, FAT32 format)");
+    // Configure the AIfES model for inference    
+    aifes_f32_fnn_create_model();
+    uint8_t inference_config_status = aifes_f32_fnn_configure_inference_model();
+    if (inference_config_status != 0) {
+        Serial.printf("Failed to configure inference model\n");
         return;
     }
 
-    int32_t correct_predictions = 0;
+    // Configure the SD card and the test dataset CSV file
+    Serial.printf("Reading /test.csv from SD card...\n");
+    if (!SD.begin(D8)) {
+        Serial.printf("SD initialization failed (check wiring, CS pin, FAT32 format)\n");
+        return;
+    }
 
-    Serial.println("Reading /test.csv from SD card...");
     char filename[10] = "/test.csv";
-    unsigned long initStart = millis();
     CSVFile testDataset(filename, 49, 1, 8, 1, true, false);
     if (!testDataset.isValid()) {
-        Serial.println("Failed to initialize test dataset");
+        Serial.printf("Invalid test dataset\n");
         return;
     }
-    unsigned long initEnd = millis();
-    Serial.print("Dataset init time: ");
-    Serial.print(initEnd - initStart);
-    Serial.println(" ms");
 
-
-    Serial.println("Running inference on test dataset...");
+    // Run inference on the test dataset
+    Serial.printf("Running inference on test dataset...\n");
+    int32_t correct_predictions = 0;
     float pixels[49], true_digit[1], output_activations[10];
     unsigned long inferenceStart = millis();
     for (uint32_t i = 0; i < testDataset.numRows(); ++i) {
         ReadStatus status = testDataset.readRow(i, pixels, true_digit);
         if (status != READ_OK) { 
-            Serial.print("Error reading row ");
-            Serial.print(i);
-            Serial.print(": ");
+            Serial.printf("Error reading row %d: ", i);
             switch (status) {
                 case INVALID_BUFFER:
-                    Serial.println("Invalid buffer");
+                    Serial.printf("Invalid buffer\n");
                     break;
                 case FILE_EOF:
-                    Serial.println("End of file reached");
+                    Serial.printf("End of file reached\n");
                     break;
                 case TOKEN_NOT_VALID:
-                    Serial.println("Token not valid");
+                    Serial.printf("Token not valid\n");
                     break;
                 case FILE_NOT_VALID:
-                    Serial.println("File not valid");
+                    Serial.printf("File not valid\n");
                     break;
                 default:
-                    Serial.println("Unknown error");
+                    Serial.printf("Unknown error\n");
             }
             continue;  // Skip to the next row
         }
 
-        aifes_e_f32_fnn_inference(pixels, output_activations);
+        aifes_f32_fnn_inference(pixels, output_activations);
 
         uint8_t predicted_digit = 0;
         for (uint8_t j = 1; j < 10; ++j)
@@ -72,18 +72,18 @@ void setup() {
     }
     unsigned long inferenceEnd = millis();
 
-    Serial.print("Inference loop time: ");
-    Serial.print(inferenceEnd - inferenceStart);
-    Serial.println(" ms");
-
-
-    Serial.print("correct predictions: ");
-    Serial.println(correct_predictions);
-    Serial.print("total predictions: ");
-    Serial.println(testDataset.numRows());
-    Serial.print("accuracy: ");
-    Serial.print((float)correct_predictions / testDataset.numRows() * 100.0, 2);
-    Serial.println("%");
+    Serial.printf(
+        "Inference completed in %lu ms (%u samples)\n",
+        inferenceEnd - inferenceStart,
+        testDataset.numRows()
+    );
+    Serial.printf(
+        "Correct predictions: %d / %d (accuracy: %.2f%%)\n",
+        correct_predictions, testDataset.numRows(),
+        (float)correct_predictions / testDataset.numRows() * 100.0
+    );
+    
+    aifes_f32_fnn_free_inference_memory();
 }
 
 void loop() {
