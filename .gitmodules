@@ -1,6 +1,8 @@
 [submodule "AIfES-Converter"]
 	path = AIfES-Converter
 	url = https://github.com/devashravan/AIfES-Converter.git
+	branch = devashravan
 [submodule "lib/AIfES"]
 	path = lib/AIfES
 	url = git@github.com:devashravan/AIfES_for_Arduino.git
+	branch = devashravan
