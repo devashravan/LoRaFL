@@ -25,17 +25,23 @@ CSVFile::CSVFile(
 {
     if (_charsPerInField == 0 || _charsPerOutField == 0 || _charsPerDataRow == 0) return;
 
-    if (filename == nullptr) 
+    if (filename == nullptr) {
+        Serial.printf("ERROR! filename is null\n");
         return;
+    }
     _filename = (char*)malloc(strlen(filename) + 1);
-    if (_filename == nullptr)
+    if (_filename == nullptr) {
+        Serial.printf("ERROR! filename too long\n");
         return;  // allocation failed
+    }
     strncpy(_filename, filename, strlen(filename) + 1);
     _filename[strlen(filename)] = '\0';
 
     _file = SD.open(_filename, FILE_READ);
-    if (!_file)
+    if (!_file) {
+        Serial.printf("ERROR! Could not open file %s\n", _filename);
         return;
+    }
 
     // Skip the header line if present
     while (_hasHeader && _file.available()) {
@@ -71,16 +77,24 @@ uint32_t CSVFile::numRows() const {
 }
 
 ReadStatus CSVFile::readRow(uint32_t rowNumber, float* features, float* outputs) {
-    if (features == nullptr || outputs == nullptr)
+    if (features == nullptr || outputs == nullptr) {
+        Serial.printf("ERROR! Invalid buffer(s)\n");
         return INVALID_BUFFER;
+    }
 
-    if (!_isValid)
+    if (!_isValid) {
+        Serial.printf("ERROR! CSV file is not valid\n");
         return FILE_NOT_VALID;
-    if (rowNumber >= _rowCount)
+    }
+    if (rowNumber >= _rowCount) {
+        Serial.printf("ERROR! Row number %d is greater than total rows %d\n", rowNumber, _rowCount);
         return FILE_EOF;
+    }
 
-    if (!_file)
+    if (!_file) {
+        Serial.printf("ERROR! CSV file is not valid\n");
         return FILE_NOT_VALID;
+    }
     _file.seek(_headerOffset + rowNumber * _charsPerDataRow);
 
     uint16_t totalFields = _numFeatures + _numOutputs;
@@ -90,7 +104,10 @@ ReadStatus CSVFile::readRow(uint32_t rowNumber, float* features, float* outputs)
         char token[charsPerField + 1];
         for (uint8_t i = 0; i < charsPerField; ++i) {
             int c = _file.read();
-            if (c == -1) return FILE_EOF; // unexpected end of file
+            if (c == -1) {
+                Serial.printf("ERROR! Unexpected end of file\n");
+                return FILE_EOF; // unexpected end of file
+            }
             token[i] = char(c);
         }
         token[charsPerField] = '\0';
@@ -98,8 +115,10 @@ ReadStatus CSVFile::readRow(uint32_t rowNumber, float* features, float* outputs)
         char* end;
         float val = strtof(token, &end);
 
-        if (end == token || *end != '\0')
+        if (end == token || *end != '\0') {
+            Serial.printf("ERROR! Token '%s' is not a valid float\n", token);
             return TOKEN_NOT_VALID;
+        }
 
         if (fieldIdx < _numFeatures) features[fieldIdx] = val;
         else if (fieldIdx < totalFields) outputs[fieldIdx - _numFeatures] = val;
@@ -121,33 +140,48 @@ void CSVFile::_checkFormat() {
         uint8_t charsPerField = (fieldIdx < _numFeatures) ? _charsPerInField : _charsPerOutField;
 
         if (c == ',' || c == '\n') {
-            if (charIdx != charsPerField)
+            if (charIdx != charsPerField) {
+                Serial.printf("ERROR! Row %d, field %d has %d characters, expected %d\n",
+                               rowCount + 1, fieldIdx + 1, charIdx, charsPerField);
                 return;  // wrong number of characters in this field
+            }
             charIdx = 0;
 
             fieldIdx++;
             if (c == '\n') {
-                if (fieldIdx != totalFields)
+                if (fieldIdx != totalFields) {
+                    Serial.printf("ERROR! Row %d has %d fields, expected %d\n",
+                                   rowCount + 1, fieldIdx, totalFields);
                     return;  // wrong number of columns in this row
+                }
                 fieldIdx = 0;
 
                 rowCount++;
             }
         } else {
             charIdx++;
-            if (charIdx > charsPerField)
+            if (charIdx > charsPerField) {
+                Serial.printf("ERROR! Row %d, field %d has more than %d characters\n",
+                               rowCount + 1, fieldIdx + 1, charsPerField);
                 return;  // field too long
+            }
         }
     }
     
     // Handle a final row with no trailing newline
     if (charIdx > 0 || fieldIdx > 0) {
         uint8_t charsPerField = (fieldIdx < _numFeatures) ? _charsPerInField : _charsPerOutField;
-        if (charIdx != charsPerField)
+        if (charIdx != charsPerField) {
+            Serial.printf("ERROR! Row %d, field %d has %d characters, expected %d\n",
+                            rowCount + 1, fieldIdx + 1, charIdx, charsPerField);
             return;
+        }
         fieldIdx++;
-        if (fieldIdx != totalFields)
+        if (fieldIdx != totalFields) {
+            Serial.printf("ERROR! Row %d has %d fields, expected %d\n",
+                            rowCount + 1, fieldIdx, totalFields);
             return;
+        }
         rowCount++;
     }
     
